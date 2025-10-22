@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>센서 데이터 대시보드</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 font-mono p-6">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-green-300 mb-4">📊 실시간 / DB 로그 대시보드</h1>
+
+    <!-- 상단 요약 -->
+    <div id="summaryTop" class="bg-gray-800 p-3 rounded-lg text-sm mb-5 text-gray-300">로딩 중...</div>
+
+    <!-- 탭 -->
+    <div class="flex space-x-4 mb-4">
+      <button id="liveTab" class="px-4 py-2 bg-green-500 text-gray-900 font-bold rounded">🌍 실시간 보기</button>
+      <button id="dbTab" class="px-4 py-2 bg-gray-700 text-gray-300 rounded">📅 DB 조회</button>
+    </div>
+
+    <!-- 🌍 실시간 보기 -->
+    <div id="liveView">
+      <!--측위-->
+      <div id="stateCard" class="p-4 rounded-lg bg-gray-800 flex justify-between items-center mb-4">
+        <div>
+          <p class="text-2xl font-bold" id="state">측위: -</p>
+        </div>
+      </div>
+
+      <!-- 센서 값 3개 -->
+      <div class="grid gap-4 text-center mb-4 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
+        <div class="bg-gray-800 p-4 rounded-lg">
+          <p>🗺️ GPS</p>
+          <p class="text-2xl font-bold text-red-400" id="gpsState">--</p>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-lg">
+          <p>☀️ 자외선(UV)</p>
+          <p id="uv" class="text-2xl font-bold text-purple-400">--</p>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-lg">
+          <p>💡 조도(Lux)</p>
+          <p id="lux" class="text-2xl font-bold text-yellow-400">--</p>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-lg">
+          <p>⛅ 기압(hPa)</p>
+          <p id="pressure" class="text-2xl font-bold text-blue-400">--</p>
+        </div>
+      </div>
+      <!-- ✅ LoRa 상태 + 거리 표시 -->
+      <div class="grid gap-4 text-center mb-4 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
+        <div class="bg-gray-800 p-4 rounded-lg">
+          <p>📡 LoRa 상태</p>
+          <p id="loraStatus" class="text-2xl font-bold text-green-400">--</p>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-lg">
+          <p>📏 거리 (m)</p>
+          <p id="loraDistance" class="text-2xl font-bold text-blue-400">--</p>
+        </div>
+      </div>
+
+
+      <!-- 최고속도 테스트 -->
+      <div class="flex justify-between items-center">
+        <button id="testBtn" class="bg-green-400 hover:bg-green-500 text-gray-900 font-bold py-2 px-4 rounded">⚡ 최고속도 측정</button>
+        <p id="maxspeed" class="text-gray-300">🚀 최고속도: - KB/s</p>
+      </div>
+
+      <!-- 데이터 취득 버튼 -->
+      <div class="flex justify-center space-x-4 mb-4">
+        <button id="btnIndoor" class="bg-blue-400 hover:bg-blue-500 text-gray-900 font-bold py-2 px-4 rounded">Indoor</button>
+        <button id="btnOutdoor" class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded">Outdoor</button>
+        <button id="btnSemiOutdoor" class="bg-purple-400 hover:bg-purple-500 text-gray-900 font-bold py-2 px-4 rounded">SemiOutdoor</button>
+      </div>
+    </div>
+
+    <!-- 📅 DB 조회 -->
+    <div id="dbView" class="hidden">
+      <div class="flex items-center space-x-4 mb-4">
+        <label>시작시간:</label><input type="datetime-local" id="startTime" class="bg-gray-800 text-green-300 border border-gray-600 rounded px-2 py-1">
+        <label>종료시간:</label><input type="datetime-local" id="endTime" class="bg-gray-800 text-green-300 border border-gray-600 rounded px-2 py-1">
+        <button id="searchBtn" class="bg-green-400 hover:bg-green-500 text-gray-900 font-bold py-1 px-3 rounded">조회</button>
+        <button id="exportBtn" class="bg-blue-400 hover:bg-blue-500 text-gray-900 font-bold py-1 px-3 rounded">CSV 다운로드</button>
+      </div>            
+      <div class="flex space-x-2 mb-4">
+        <button id="btnIndoor"class="bg-blue-400 hover:bg-blue-500 text-gray-900 font-bold py-1 px-3 rounded" onclick="setLabelAndLoad('Indoor')">Indoor</button>
+        <button id="btnOutdoor"class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-1 px-3 rounded" onclick="setLabelAndLoad('Outdoor')">Outdoor</button>
+        <button id="btnSemiOutdoor"class="bg-purple-400 hover:bg-purple-500 text-gray-900 font-bold py-1 px-3 rounded" onclick="setLabelAndLoad('SemiOutdoor')">SemiOutdoor</button>
+      </div>
+      <!-- ✅ 스크롤 영역 추가 -->
+      <div class="overflow-y-auto max-h-[500px] border border-gray-700 rounded-lg">
+        <table class="w-full text-sm text-gray-200">
+          <thead class="bg-gray-700 text-gray-100 sticky top-0">
+            <tr>
+              <th class="px-2">시간</th>
+              <th class="px-2">GPS</th>
+              <th class="px-2">UVI</th>
+              <th class="px-2">조도(lux)</th>
+              <th class="px-2">기압(hPa)</th>
+              <th class="px-2">상태</th>
+              <th class="px-2">점수</th>
+            </tr>
+          </thead>
+          <tbody id="dataBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ====================== 탭 전환 ======================
+const liveTab=document.getElementById("liveTab");
+const dbTab=document.getElementById("dbTab");
+const liveView=document.getElementById("liveView");
+const dbView=document.getElementById("dbView");
+
+liveTab.onclick=()=>{
+  liveView.classList.remove("hidden");
+  dbView.classList.add("hidden");
+  liveTab.classList.add("bg-green-500","text-gray-900");
+  dbTab.classList.remove("bg-green-500","text-gray-900");
+  dbTab.classList.add("bg-gray-700","text-gray-300");
+};
+dbTab.onclick=()=>{
+  dbView.classList.remove("hidden");
+  liveView.classList.add("hidden");
+  dbTab.classList.add("bg-green-500","text-gray-900");
+  liveTab.classList.remove("bg-green-500","text-gray-900");
+  liveTab.classList.add("bg-gray-700","text-gray-300");
+};
+
+// ====================== DB 조회 ======================
+const searchBtn=document.getElementById("searchBtn");
+const exportBtn=document.getElementById("exportBtn");
+const dataBody=document.getElementById("dataBody");
+const summaryTop=document.getElementById("summaryTop");
+
+
+searchBtn.onclick=async()=>{
+  const start=document.getElementById("startTime").value.replace("T"," ");
+  const end=document.getElementById("endTime").value.replace("T"," ");
+  const url=`/api/data?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+  const res=await fetch(url);
+  const data=await res.json();
+  dataBody.innerHTML="";
+  for(const row of data){
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="border-t px-2">${row.timestamp ?? '-'}</td>
+                  <td class="border-t px-2">${row.gps_fix ?? '-'}</td>
+                  <td class="border-t px-2">${row.uv != null ? row.uv.toFixed(2) : '--'}</td>
+                  <td class="border-t px-2">${row.lux != null ? row.lux.toFixed(0) : '--'}</td>
+                  <td class="border-t px-2">${row.pressure != null ? row.pressure.toFixed(2) : '--'}</td>
+                  <td class="border-t px-2">${row.state ?? '-'}</td>
+                  <td class="border-t px-2">${row.score != null ? row.score.toFixed(3) : '--'}</td>`;
+    dataBody.appendChild(tr);
+  }
+};
+
+// 📤 CSV 다운로드
+exportBtn.onclick = () => {
+  const start = document.getElementById("startTime").value.replace("T", " ");
+  const end = document.getElementById("endTime").value.replace("T", " ");
+  const label = window.currentLabel || ""; // 라벨버튼 눌렀으면 거기 기록
+
+  let url = `/api/export_csv?`;
+  if (start) url += `start=${encodeURIComponent(start)}&`;
+  if (end) url += `end=${encodeURIComponent(end)}&`;
+  if (label) url += `label=${encodeURIComponent(label)}&`;
+
+  window.location.href = url;
+};
+
+// ✅ 라벨 버튼 눌렀을 때 현재 선택 라벨 저장
+function setLabelAndLoad(label) {
+  window.currentLabel = label; // export 시 참고
+  loadLabelData(label);
+}
+
+
+// ====================== 통계 요약 ======================
+async function loadSummary(){
+  const res=await fetch("/api/summary");
+  const sum=await res.json();
+  const text=`전체 ${sum.rows}개 |
+    ☀️ UVI 평균 ${sum.uv.avg?.toFixed(3)} |
+    💡 조도 평균 ${sum.lux.avg?.toFixed(1)} |
+    ⛅ 기압 평균 ${sum.pressure.avg?.toFixed(2)}`;
+  summaryTop.textContent=text;
+
+}
+loadSummary();
+
+// ====================== 실시간 WebSocket 표시 ======================
+const ws = new WebSocket(`ws://192.168.0.22:8765`);
+let testing = false;
+let maxSpeed = 0;
+let lastSensor = null;
+
+ws.onopen = () => console.log("[WS] 연결됨");
+ws.onclose = () => console.warn("[WS] 연결 끊김");
+ws.onerror = e => console.error("[WS ERROR]", e);
+
+ws.onmessage = e => {
+  if (!e.data) return;
+
+  let data;
+  try {
+    data = JSON.parse(e.data);
+  } catch {
+    return;
+  }
+
+  // ⚡ 최고속도 테스트 완료 시
+  if (data.test_done && data.lora_result) {
+    const result = data.lora_result;
+    const { packets, bytes, time, bps, kbps, log_path } = result;
+
+    // === 평균속도/최고속도 계산 ===
+    const kbPerSec = (bps / 1024).toFixed(2); // Bytes/s → KB/s
+    const mbps = (kbps / 1000).toFixed(3);    // kbps → Mbps
+
+    // 최고속도 갱신
+    if (parseFloat(kbPerSec) > maxSpeed) {
+      maxSpeed = parseFloat(kbPerSec);
+    }
+
+    // === 화면 출력 ===
+    document.getElementById("maxspeed").innerHTML = `
+      🚀 최고속도: <span class="text-pink-400 font-bold">${maxSpeed.toFixed(2)}</span> KB/s
+    `;
+
+    // ✅ 결과 상세 표시용 박스 추가
+    let resultBox = document.getElementById("testResultBox");
+    if (!resultBox) {
+      resultBox = document.createElement("div");
+      resultBox.id = "testResultBox";
+      resultBox.className = "mt-4 p-3 rounded-lg bg-gray-800 text-sm text-gray-200 border border-gray-700";
+      document.querySelector("#liveView").appendChild(resultBox);
+    }
+
+    resultBox.innerHTML = `
+      <p>📦 <b>패킷 수:</b> ${packets}</p>
+      <p>💾 <b>총 데이터량:</b> ${bytes} Bytes</p>
+      <p>⏱️ <b>총 소요시간:</b> ${time} s</p>
+      <p>📈 <b>평균 속도:</b> ${bps} B/s (${kbps} kbps)</p>
+      <p>📄 <b>로그 경로:</b> ${log_path}</p>
+    `;
+
+    testing = false;
+    console.log(`[TEST DONE] ${kbps} kbps (${kbPerSec} KB/s)`);
+    return;
+  }
+
+  // === 센서 실시간 데이터 수신 ===
+  if (!testing && data.timestamp) {
+    const gpsFix = data.gps_fix === "A" ? "신호있음" : "신호없음";
+    document.getElementById("gpsState").textContent = gpsFix;
+    document.getElementById("state").textContent = `측위: ${data.state}`;
+    document.getElementById("uv").textContent = data.uv?.toFixed(2) ?? "--";
+    document.getElementById("lux").textContent = data.lux?.toFixed(0) ?? "--";
+    document.getElementById("pressure").textContent = data.pressure?.toFixed(2) ?? "--";
+    document.getElementById("loraStatus").textContent = data.lora ?? "--";
+    if (data.lora_dist) {
+      document.getElementById("loraDistance").textContent = `${data.lora_dist.toFixed(1)} m`;
+    }
+    lastSensor = data;
+  }
+};
+
+// ✅ 최고속도 테스트 버튼
+const testBtn = document.getElementById("testBtn");
+testBtn.onclick = () => {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send("start_test");
+    testing = true;
+    maxSpeed = 0;
+
+    // UI 초기화
+    
+    document.getElementById("maxspeed").textContent = "🚀 계산 중...";
+    const existing = document.getElementById("testResultBox");
+    if (existing) existing.remove();
+
+    console.log("[TEST] LoRa 단방향 속도테스트 시작");
+  } else {
+    alert("❌ WebSocket 연결이 되어 있지 않습니다.");
+  }
+};
+
+
+// ✅ 라벨 저장 함수 (버튼 색 피드백 버전)
+async function saveLabel(label) {
+  const btn = document.getElementById(`btn${label}`);
+  if (!lastSensor) {
+    const original = btn.textContent;
+    btn.textContent = "⚠️ 데이터 없음";
+    btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, ""); // 기존 bg-* 전부 제거
+    btn.classList.add("bg-red-500");
+    btn.disabled = true;
+
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, ""); // 다시 색상 초기화
+      btn.classList.add(`bg-${label === "Indoor" ? "blue" : label === "Outdoor" ? "yellow" : "purple"}-400`);
+      btn.disabled = false;
+    }, 1200);
+    return;
+  }
+
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = "⏳ 저장 중...";
+  btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, "");
+  btn.classList.add("bg-blue-500");
+
+  try {
+    const res = await fetch("/api/label", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label, values: lastSensor })
+    });
+
+    if (res.ok) {
+      const result = await res.json();
+      btn.textContent = "✅ 저장됨";
+      btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, "");
+      btn.classList.add("bg-green-500");
+      console.log(`[OK] ${result.label} 데이터 저장 완료`);
+    } else {
+      throw new Error("서버 응답 오류");
+    }
+  } catch (err) {
+    console.error(err);
+    btn.textContent = "❌ 실패";
+    btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, "");
+    btn.classList.add("bg-red-500");
+  }
+
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, "");
+    btn.classList.add(`bg-${label === "Indoor" ? "blue" : label === "Outdoor" ? "yellow" : "purple"}-400`);
+    btn.disabled = false;
+  }, 1500);
+}
+
+// ✅ 버튼 클릭 이벤트
+document.getElementById("btnIndoor").onclick = () => saveLabel("Indoor");
+document.getElementById("btnOutdoor").onclick = () => saveLabel("Outdoor");
+document.getElementById("btnSemiOutdoor").onclick = () => saveLabel("SemiOutdoor");
+
+async function loadLabelData(label){
+  const res = await fetch(`/api/label_data?label=${encodeURIComponent(label)}`);
+  const data = await res.json();
+  const body = document.getElementById("dataBody");
+  body.innerHTML = "";
+  for(const row of data){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="border-t px-2">${row.timestamp}</td>
+                    <td class="border-t px-2">${row.gps_fix ?? '-'}</td>
+                    <td class="border-t px-2">${row.uv?.toFixed(2)}</td>
+                    <td class="border-t px-2">${row.lux?.toFixed(0)}</td>
+                    <td class="border-t px-2">${row.pressure?.toFixed(2)}</td>`;
+    body.appendChild(tr);
+  }
+}
+</script>
+</body>
+</html>
