@@ -13,13 +13,18 @@ Flask + WebSocket 서버를 통해 실시간으로 웹 대시보드에 시각화
 ### 구성도
 [센서 모듈]
 ├─ LTR390 (자외선/조도)
+
 ├─ BME280 (온도/습도/기압)
+
 ├─ GPS (L80-R, CP2102 USB-UART)
+
 └─ LoRa 모듈 (RYLR998 / E22-230T22U 등)
 
 [라즈베리파이5]
 ├─ websocket.py → 실시간 데이터 수집, GPS/LoRa 통신, WebSocket 송신
+
 ├─ flask.py → DB 관리 및 REST API, CSV Export, 웹서버
+
 └─ new.html → 실시간 대시보드 UI
 
 [웹 클라이언트]
@@ -35,12 +40,19 @@ yaml
 | 구분 | 설명 |
 |------|------|
 | 🌐 **실시간 WebSocket 송신** | 1초 간격으로 센서 데이터를 웹으로 전송 |
+
 | 📊 **Flask REST API** | DB 조회, 통계, CSV Export 기능 제공 |
+
 | 💾 **SQLite 로컬 DB** | `sensor_log` 테이블에 모든 센서값 자동 저장 |
+
 | 🛰️ **GPS 기반 좌표 수집** | NMEA 파싱으로 유효성(A/V) 및 위도·경도 추출 |
+
 | 📡 **LoRa 통신** | 송수신 데이터 처리 및 거리 계산 (Haversine 공식) |
+
 | 🏠 **실내/실외 판별 알고리즘** | 조도·기압·자외선·GPS fix 상태 기반 환경 분류 |
+
 | 📈 **웹 대시보드 시각화** | 실시간 센서값 표시 + DB 검색/CSV 다운로드 UI |
+
 | ⚡ **LoRa 속도 테스트 모드** | WebSocket 명령(`start_test`)으로 패킷 전송 성능 측정 |
 
 ---
@@ -49,11 +61,17 @@ yaml
 
 📁 main/
 ├── websocket.py # WebSocket + 센서 수집 서버
+
 ├── flask.py # Flask REST API 서버
+
 ├── web/
+
 │ └── new.html # 대시보드 UI (TailwindCSS)
+
 └── totallogs/
+
 ├── sensor.db # SQLite 데이터베이스
+
 └── sensor.log # 실행 로그
 
 yaml
@@ -90,21 +108,22 @@ yaml
 ## 💻 실행 방법
 
 ### 1️⃣ Python 환경 구성
-```bash
-sudo apt update
-sudo apt install python3-pip python3-venv
-python3 -m venv ltr390env
-source ltr390env/bin/activate
-pip install flask websockets adafruit-circuitpython-ltr390 adafruit-circuitpython-bme280 pyserial
+
+    sudo apt update
+    sudo apt install python3-pip python3-venv
+    python3 -m venv ltr390env
+    source ltr390env/bin/activate
+    pip install flask websockets adafruit-circuitpython-ltr390 adafruit-circuitpython-bme280 pyserial
+
 2️⃣ Flask 서버 실행
-bash
-코드 복사
-python3 flask.py
-# → http://라즈베리파이IP:8080 접속
+
+    python3 flask.py
+    
+# → http://라즈`베리파이IP:8080 접속
 3️⃣ WebSocket 센서 서버 실행
-bash
-코드 복사
-python3 websocket.py
+
+    python3 websocket.py
+
 # → 센서 수집 + 실시간 송신 시작
 📊 웹 대시보드 주요 화면
 실시간 센서 모니터링 (GPS, UV, Lux, Pressure)
