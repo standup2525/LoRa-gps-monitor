@@ -12,6 +12,7 @@ Flask + WebSocket 서버를 통해 실시간으로 웹 대시보드에 시각화
 
 ### 구성도
 [센서 모듈]
+
 ├─ LTR390 (자외선/조도)
 
 ├─ BME280 (온도/습도/기압)
@@ -21,6 +22,7 @@ Flask + WebSocket 서버를 통해 실시간으로 웹 대시보드에 시각화
 └─ LoRa 모듈 (RYLR998 / E22-230T22U 등)
 
 [라즈베리파이5]
+
 ├─ websocket.py → 실시간 데이터 수집, GPS/LoRa 통신, WebSocket 송신
 
 ├─ flask.py → DB 관리 및 REST API, CSV Export, 웹서버
@@ -28,6 +30,7 @@ Flask + WebSocket 서버를 통해 실시간으로 웹 대시보드에 시각화
 └─ new.html → 실시간 대시보드 UI
 
 [웹 클라이언트]
+
 └─ 실시간 상태, DB 로그 조회, CSV 다운로드, 라벨링(Indoor/Outdoor)
 
 yaml
@@ -60,6 +63,7 @@ yaml
 ## 🗂️ 디렉터리 구조
 
 📁 main/
+
 ├── websocket.py # WebSocket + 센서 수집 서버
 
 ├── flask.py # Flask REST API 서버
@@ -119,7 +123,7 @@ yaml
 
     python3 flask.py
     
-# → http://라즈`베리파이IP:8080 접속
+# → http://라즈베리파이IP:8080 접속
 3️⃣ WebSocket 센서 서버 실행
 
     python3 websocket.py
