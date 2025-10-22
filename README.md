@@ -170,6 +170,3 @@ timestamp	gps_fix	uv	lux	pressure	state	score
 데이터베이스	SQLite3
 프론트엔드	TailwindCSS + JS (Vanilla)
 센서	LTR390 / BME280 / GPS(L80-R) / LoRa(E22-230T22U)
-
-📜 라이선스
-본 프로젝트는 MIT License 하에 배포됩니다.
