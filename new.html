@@ -1,110 +1,178 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>센서 데이터 대시보드</title>
-<script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoRa GPS Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a20;
+      --panel-2: #1e222a;
+      --ink: #f5f7fb;
+      --muted: #9aa4b2;
+      --accent: #00e0a4;
+      --danger: #ff5c70;
+      --stroke: rgba(255, 255, 255, 0.08);
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--ink); font-family: "Manrope", system-ui, sans-serif; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .card { background: var(--panel); border: 1px solid var(--stroke); box-shadow: 0 16px 40px rgba(0,0,0,0.35); }
+    .card-2 { background: var(--panel-2); border: 1px solid var(--stroke); }
+    .accent { color: #0b1a14; background: var(--accent); }
+    .tab-active { background: var(--ink); color: #0f1115; }
+    .tab-inactive { background: var(--panel-2); color: var(--muted); border: 1px solid var(--stroke); }
+    .gridline {
+      background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+  </style>
 </head>
-<body class="bg-gray-900 text-gray-100 font-mono p-6">
-  <div class="max-w-6xl mx-auto">
-    <h1 class="text-3xl font-bold text-green-300 mb-4">📊 실시간 / DB 로그 대시보드</h1>
-
-    <!-- 상단 요약 -->
-    <div id="summaryTop" class="bg-gray-800 p-3 rounded-lg text-sm mb-5 text-gray-300">로딩 중...</div>
-
-    <!-- 탭 -->
-    <div class="flex space-x-4 mb-4">
-      <button id="liveTab" class="px-4 py-2 bg-green-500 text-gray-900 font-bold rounded">🌍 실시간 보기</button>
-      <button id="dbTab" class="px-4 py-2 bg-gray-700 text-gray-300 rounded">📅 DB 조회</button>
-    </div>
-
-    <!-- 🌍 실시간 보기 -->
-    <div id="liveView">
-      <!--측위-->
-      <div id="stateCard" class="p-4 rounded-lg bg-gray-800 flex justify-between items-center mb-4">
-        <div>
-          <p class="text-2xl font-bold" id="state">측위: -</p>
+<body class="min-h-screen gridline">
+  <div class="min-h-screen p-4 md:p-6">
+    <div class="max-w-7xl mx-auto grid gap-6 md:grid-cols-[260px,1fr]">
+      <!-- Sidebar -->
+      <aside class="card rounded-2xl p-5 h-fit md:sticky md:top-6">
+        <div class="space-y-2">
+          <p class="mono text-xs uppercase tracking-[0.35em] text-slate-400">LoRa + GPS</p>
+          <h1 class="text-xl font-semibold">Telemetry Console</h1>
+          <p class="text-xs text-slate-400">실시간 센서 & 로그 관리</p>
         </div>
-      </div>
+        <div class="mt-6 space-y-3">
+          <div class="card-2 rounded-xl p-3">
+            <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Stream</p>
+            <div class="mt-2 flex items-center gap-2 text-sm">
+              <span id="streamDot" class="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="streamStatus" class="text-emerald-200">Connected</span>
+            </div>
+            <p class="mt-2 text-xs text-slate-400">ws://192.168.0.22:8765</p>
+          </div>
+          <div class="card-2 rounded-xl p-3">
+            <p class="mono text-[11px] uppercase tracking-[0.25em] text-slate-400">Quick Actions</p>
+            <div class="mt-3 grid gap-2">
+              <button id="liveTab" class="tab-active rounded-lg px-3 py-2 text-sm font-semibold">실시간 보기</button>
+              <button id="dbTab" class="tab-inactive rounded-lg px-3 py-2 text-sm font-semibold">DB 조회</button>
+            </div>
+          </div>
+        </div>
+      </aside>
 
-      <!-- 센서 값 3개 -->
-      <div class="grid gap-4 text-center mb-4 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
-        <div class="bg-gray-800 p-4 rounded-lg">
-          <p>🗺️ GPS</p>
-          <p class="text-2xl font-bold text-red-400" id="gpsState">--</p>
-        </div>
-        <div class="bg-gray-800 p-4 rounded-lg">
-          <p>☀️ 자외선(UV)</p>
-          <p id="uv" class="text-2xl font-bold text-purple-400">--</p>
-        </div>
-        <div class="bg-gray-800 p-4 rounded-lg">
-          <p>💡 조도(Lux)</p>
-          <p id="lux" class="text-2xl font-bold text-yellow-400">--</p>
-        </div>
-        <div class="bg-gray-800 p-4 rounded-lg">
-          <p>⛅ 기압(hPa)</p>
-          <p id="pressure" class="text-2xl font-bold text-blue-400">--</p>
-        </div>
-      </div>
-      <!-- ✅ LoRa 상태 + 거리 표시 -->
-      <div class="grid gap-4 text-center mb-4 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
-        <div class="bg-gray-800 p-4 rounded-lg">
-          <p>📡 LoRa 상태</p>
-          <p id="loraStatus" class="text-2xl font-bold text-green-400">--</p>
-        </div>
-        <div class="bg-gray-800 p-4 rounded-lg">
-          <p>📏 거리 (m)</p>
-          <p id="loraDistance" class="text-2xl font-bold text-blue-400">--</p>
-        </div>
-      </div>
+      <!-- Main -->
+      <main class="space-y-6">
+        <section id="summaryTop" class="card rounded-2xl p-4 text-sm text-slate-200">
+          불러오는 중...
+        </section>
 
+        <section id="liveView" class="space-y-5">
+          <div id="stateCard" class="card rounded-2xl p-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p class="mono text-[11px] uppercase tracking-[0.2em] text-slate-400">Status</p>
+              <p class="text-2xl font-semibold" id="state">상태: -</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+              <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
+              <span>Live telemetry running</span>
+            </div>
+          </div>
 
-      <!-- 최고속도 테스트 -->
-      <div class="flex justify-between items-center">
-        <button id="testBtn" class="bg-green-400 hover:bg-green-500 text-gray-900 font-bold py-2 px-4 rounded">⚡ 최고속도 측정</button>
-        <p id="maxspeed" class="text-gray-300">🚀 최고속도: - KB/s</p>
-      </div>
+          <div class="grid gap-4 md:grid-cols-4">
+            <div class="card rounded-2xl p-4">
+              <p class="mono text-[11px] uppercase tracking-[0.2em] text-slate-400">GPS</p>
+              <p class="text-2xl font-semibold mt-2" id="gpsState">--</p>
+            </div>
+            <div class="card rounded-2xl p-4">
+              <p class="mono text-[11px] uppercase tracking-[0.2em] text-slate-400">UVI</p>
+              <p class="text-2xl font-semibold mt-2" id="uv">--</p>
+            </div>
+            <div class="card rounded-2xl p-4">
+              <p class="mono text-[11px] uppercase tracking-[0.2em] text-slate-400">Lux</p>
+              <p class="text-2xl font-semibold mt-2" id="lux">--</p>
+            </div>
+            <div class="card rounded-2xl p-4">
+              <p class="mono text-[11px] uppercase tracking-[0.2em] text-slate-400">Pressure</p>
+              <p class="text-2xl font-semibold mt-2" id="pressure">--</p>
+            </div>
+          </div>
 
-      <!-- 데이터 취득 버튼 -->
-      <div class="flex justify-center space-x-4 mb-4">
-        <button id="btnIndoor" class="bg-blue-400 hover:bg-blue-500 text-gray-900 font-bold py-2 px-4 rounded">Indoor</button>
-        <button id="btnOutdoor" class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded">Outdoor</button>
-        <button id="btnSemiOutdoor" class="bg-purple-400 hover:bg-purple-500 text-gray-900 font-bold py-2 px-4 rounded">SemiOutdoor</button>
-      </div>
-    </div>
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="card rounded-2xl p-4">
+              <p class="mono text-[11px] uppercase tracking-[0.2em] text-slate-400">LoRa Status</p>
+              <p class="text-2xl font-semibold mt-2" id="loraStatus">--</p>
+            </div>
+            <div class="card rounded-2xl p-4">
+              <p class="mono text-[11px] uppercase tracking-[0.2em] text-slate-400">Distance (m)</p>
+              <p class="text-2xl font-semibold mt-2" id="loraDistance">--</p>
+            </div>
+          </div>
 
-    <!-- 📅 DB 조회 -->
-    <div id="dbView" class="hidden">
-      <div class="flex items-center space-x-4 mb-4">
-        <label>시작시간:</label><input type="datetime-local" id="startTime" class="bg-gray-800 text-green-300 border border-gray-600 rounded px-2 py-1">
-        <label>종료시간:</label><input type="datetime-local" id="endTime" class="bg-gray-800 text-green-300 border border-gray-600 rounded px-2 py-1">
-        <button id="searchBtn" class="bg-green-400 hover:bg-green-500 text-gray-900 font-bold py-1 px-3 rounded">조회</button>
-        <button id="exportBtn" class="bg-blue-400 hover:bg-blue-500 text-gray-900 font-bold py-1 px-3 rounded">CSV 다운로드</button>
-      </div>            
-      <div class="flex space-x-2 mb-4">
-        <button id="btnIndoor"class="bg-blue-400 hover:bg-blue-500 text-gray-900 font-bold py-1 px-3 rounded" onclick="setLabelAndLoad('Indoor')">Indoor</button>
-        <button id="btnOutdoor"class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-1 px-3 rounded" onclick="setLabelAndLoad('Outdoor')">Outdoor</button>
-        <button id="btnSemiOutdoor"class="bg-purple-400 hover:bg-purple-500 text-gray-900 font-bold py-1 px-3 rounded" onclick="setLabelAndLoad('SemiOutdoor')">SemiOutdoor</button>
-      </div>
-      <!-- ✅ 스크롤 영역 추가 -->
-      <div class="overflow-y-auto max-h-[500px] border border-gray-700 rounded-lg">
-        <table class="w-full text-sm text-gray-200">
-          <thead class="bg-gray-700 text-gray-100 sticky top-0">
-            <tr>
-              <th class="px-2">시간</th>
-              <th class="px-2">GPS</th>
-              <th class="px-2">UVI</th>
-              <th class="px-2">조도(lux)</th>
-              <th class="px-2">기압(hPa)</th>
-              <th class="px-2">상태</th>
-              <th class="px-2">점수</th>
-            </tr>
-          </thead>
-          <tbody id="dataBody"></tbody>
-        </table>
-      </div>
+          <div class="card rounded-2xl p-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <button id="testBtn" class="accent rounded-lg px-5 py-2 text-sm font-semibold">LoRa 최고속도 테스트</button>
+            <p id="maxspeed" class="mono text-sm text-slate-300">최고속도: - KB/s</p>
+          </div>
+
+          <div class="card rounded-2xl p-4 grid gap-3 md:grid-cols-3">
+            <button id="btnIndoor" data-base="btn-neutral" class="btn-neutral rounded-lg px-4 py-2 text-sm font-semibold">Indoor 라벨</button>
+            <button id="btnOutdoor" data-base="btn-neutral" class="btn-neutral rounded-lg px-4 py-2 text-sm font-semibold">Outdoor 라벨</button>
+            <button id="btnSemiOutdoor" data-base="btn-neutral" class="btn-neutral rounded-lg px-4 py-2 text-sm font-semibold">SemiOutdoor 라벨</button>
+          </div>
+        </section>
+
+        <section id="dbView" class="hidden space-y-5">
+          <div class="card rounded-2xl p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div class="flex flex-wrap items-center gap-3">
+              <label class="text-sm text-slate-300">시작 시간</label>
+              <input type="datetime-local" id="startTime" class="rounded-lg bg-slate-900/70 border border-slate-700 px-3 py-2 text-sm text-slate-200">
+              <label class="text-sm text-slate-300">종료 시간</label>
+              <input type="datetime-local" id="endTime" class="rounded-lg bg-slate-900/70 border border-slate-700 px-3 py-2 text-sm text-slate-200">
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="searchBtn" class="accent rounded-lg px-4 py-2 text-sm font-semibold">조회</button>
+              <button id="exportBtn" class="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800 transition">CSV 다운로드</button>
+            </div>
+          </div>
+
+          <div class="card rounded-2xl p-4 flex flex-wrap gap-3">
+            <button id="btnIndoorDb" class="btn-neutral rounded-lg px-4 py-2 text-sm font-semibold" onclick="setLabelAndLoad('Indoor')">Indoor 필터</button>
+            <button id="btnOutdoorDb" class="btn-neutral rounded-lg px-4 py-2 text-sm font-semibold" onclick="setLabelAndLoad('Outdoor')">Outdoor 필터</button>
+            <button id="btnSemiOutdoorDb" class="btn-neutral rounded-lg px-4 py-2 text-sm font-semibold" onclick="setLabelAndLoad('SemiOutdoor')">SemiOutdoor 필터</button>
+          </div>
+
+          <div class="card rounded-2xl overflow-hidden">
+            <div class="overflow-y-auto max-h-[520px]">
+              <table class="w-full text-sm text-slate-200">
+                <thead class="bg-slate-900/80 text-slate-200 sticky top-0">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-[11px] uppercase tracking-wider text-slate-400">시간</th>
+                    <th class="px-4 py-3 text-left text-[11px] uppercase tracking-wider text-slate-400">GPS</th>
+                    <th class="px-4 py-3 text-left text-[11px] uppercase tracking-wider text-slate-400">UVI</th>
+                    <th class="px-4 py-3 text-left text-[11px] uppercase tracking-wider text-slate-400">조도 (Lux)</th>
+                    <th class="px-4 py-3 text-left text-[11px] uppercase tracking-wider text-slate-400">기압 (hPa)</th>
+                    <th class="px-4 py-3 text-left text-[11px] uppercase tracking-wider text-slate-400">상태</th>
+                    <th class="px-4 py-3 text-left text-[11px] uppercase tracking-wider text-slate-400">점수</th>
+                  </tr>
+                </thead>
+                <tbody id="dataBody" class="divide-y divide-slate-800"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   </div>
+
+  <style>
+    .btn-neutral {
+      background: #20242c;
+      color: #e7ecf2;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .btn-neutral:hover { background: #2a303a; }
+  </style>
 
 <script>
 // ====================== 탭 전환 ======================
@@ -112,20 +180,24 @@ const liveTab=document.getElementById("liveTab");
 const dbTab=document.getElementById("dbTab");
 const liveView=document.getElementById("liveView");
 const dbView=document.getElementById("dbView");
+const streamStatus=document.getElementById("streamStatus");
+const streamDot=document.getElementById("streamDot");
 
 liveTab.onclick=()=>{
   liveView.classList.remove("hidden");
   dbView.classList.add("hidden");
-  liveTab.classList.add("bg-green-500","text-gray-900");
-  dbTab.classList.remove("bg-green-500","text-gray-900");
-  dbTab.classList.add("bg-gray-700","text-gray-300");
+  liveTab.classList.add("tab-active");
+  liveTab.classList.remove("tab-inactive");
+  dbTab.classList.add("tab-inactive");
+  dbTab.classList.remove("tab-active");
 };
 dbTab.onclick=()=>{
   dbView.classList.remove("hidden");
   liveView.classList.add("hidden");
-  dbTab.classList.add("bg-green-500","text-gray-900");
-  liveTab.classList.remove("bg-green-500","text-gray-900");
-  liveTab.classList.add("bg-gray-700","text-gray-300");
+  dbTab.classList.add("tab-active");
+  dbTab.classList.remove("tab-inactive");
+  liveTab.classList.add("tab-inactive");
+  liveTab.classList.remove("tab-active");
 };
 
 // ====================== DB 조회 ======================
@@ -133,7 +205,6 @@ const searchBtn=document.getElementById("searchBtn");
 const exportBtn=document.getElementById("exportBtn");
 const dataBody=document.getElementById("dataBody");
 const summaryTop=document.getElementById("summaryTop");
-
 
 searchBtn.onclick=async()=>{
   const start=document.getElementById("startTime").value.replace("T"," ");
@@ -144,22 +215,22 @@ searchBtn.onclick=async()=>{
   dataBody.innerHTML="";
   for(const row of data){
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td class="border-t px-2">${row.timestamp ?? '-'}</td>
-                  <td class="border-t px-2">${row.gps_fix ?? '-'}</td>
-                  <td class="border-t px-2">${row.uv != null ? row.uv.toFixed(2) : '--'}</td>
-                  <td class="border-t px-2">${row.lux != null ? row.lux.toFixed(0) : '--'}</td>
-                  <td class="border-t px-2">${row.pressure != null ? row.pressure.toFixed(2) : '--'}</td>
-                  <td class="border-t px-2">${row.state ?? '-'}</td>
-                  <td class="border-t px-2">${row.score != null ? row.score.toFixed(3) : '--'}</td>`;
+    tr.innerHTML=`<td class="px-4 py-2">${row.timestamp ?? '-'}</td>
+                  <td class="px-4 py-2">${row.gps_fix ?? '-'}</td>
+                  <td class="px-4 py-2">${row.uv != null ? row.uv.toFixed(2) : '--'}</td>
+                  <td class="px-4 py-2">${row.lux != null ? row.lux.toFixed(0) : '--'}</td>
+                  <td class="px-4 py-2">${row.pressure != null ? row.pressure.toFixed(2) : '--'}</td>
+                  <td class="px-4 py-2">${row.state ?? '-'}</td>
+                  <td class="px-4 py-2">${row.score != null ? row.score.toFixed(3) : '--'}</td>`;
     dataBody.appendChild(tr);
   }
 };
 
-// 📤 CSV 다운로드
+// CSV 다운로드
 exportBtn.onclick = () => {
   const start = document.getElementById("startTime").value.replace("T", " ");
   const end = document.getElementById("endTime").value.replace("T", " ");
-  const label = window.currentLabel || ""; // 라벨버튼 눌렀으면 거기 기록
+  const label = window.currentLabel || "";
 
   let url = `/api/export_csv?`;
   if (start) url += `start=${encodeURIComponent(start)}&`;
@@ -169,23 +240,18 @@ exportBtn.onclick = () => {
   window.location.href = url;
 };
 
-// ✅ 라벨 버튼 눌렀을 때 현재 선택 라벨 저장
+// 라벨 필터
 function setLabelAndLoad(label) {
-  window.currentLabel = label; // export 시 참고
+  window.currentLabel = label;
   loadLabelData(label);
 }
-
 
 // ====================== 통계 요약 ======================
 async function loadSummary(){
   const res=await fetch("/api/summary");
   const sum=await res.json();
-  const text=`전체 ${sum.rows}개 |
-    ☀️ UVI 평균 ${sum.uv.avg?.toFixed(3)} |
-    💡 조도 평균 ${sum.lux.avg?.toFixed(1)} |
-    ⛅ 기압 평균 ${sum.pressure.avg?.toFixed(2)}`;
+  const text=`전체 ${sum.rows}개 | 자외선 평균 ${sum.uv.avg?.toFixed(3)} | 조도 평균 ${sum.lux.avg?.toFixed(1)} | 기압 평균 ${sum.pressure.avg?.toFixed(2)}`;
   summaryTop.textContent=text;
-
 }
 loadSummary();
 
@@ -195,54 +261,51 @@ let testing = false;
 let maxSpeed = 0;
 let lastSensor = null;
 
-ws.onopen = () => console.log("[WS] 연결됨");
-ws.onclose = () => console.warn("[WS] 연결 끊김");
+ws.onopen = () => {
+  console.log("[WS] 연결됨");
+  streamStatus.textContent = "Connected";
+  streamStatus.className = "text-emerald-200";
+  streamDot.className = "inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse";
+};
+ws.onclose = () => {
+  console.warn("[WS] 연결 끊김");
+  streamStatus.textContent = "Disconnected";
+  streamStatus.className = "text-rose-300";
+  streamDot.className = "inline-flex h-2.5 w-2.5 rounded-full bg-rose-400";
+};
 ws.onerror = e => console.error("[WS ERROR]", e);
 
 ws.onmessage = e => {
   if (!e.data) return;
 
   let data;
-  try {
-    data = JSON.parse(e.data);
-  } catch {
-    return;
-  }
+  try { data = JSON.parse(e.data); } catch { return; }
 
-  // ⚡ 최고속도 테스트 완료 시
   if (data.test_done && data.lora_result) {
     const result = data.lora_result;
     const { packets, bytes, time, bps, kbps, log_path } = result;
 
-    // === 평균속도/최고속도 계산 ===
-    const kbPerSec = (bps / 1024).toFixed(2); // Bytes/s → KB/s
-    const mbps = (kbps / 1000).toFixed(3);    // kbps → Mbps
+    const kbPerSec = (bps / 1024).toFixed(2);
+    const mbps = (kbps / 1000).toFixed(3);
 
-    // 최고속도 갱신
-    if (parseFloat(kbPerSec) > maxSpeed) {
-      maxSpeed = parseFloat(kbPerSec);
-    }
+    if (parseFloat(kbPerSec) > maxSpeed) maxSpeed = parseFloat(kbPerSec);
 
-    // === 화면 출력 ===
-    document.getElementById("maxspeed").innerHTML = `
-      🚀 최고속도: <span class="text-pink-400 font-bold">${maxSpeed.toFixed(2)}</span> KB/s
-    `;
+    document.getElementById("maxspeed").innerHTML = `최고속도: <span class="text-emerald-200 font-semibold">${maxSpeed.toFixed(2)}</span> KB/s`;
 
-    // ✅ 결과 상세 표시용 박스 추가
     let resultBox = document.getElementById("testResultBox");
     if (!resultBox) {
       resultBox = document.createElement("div");
       resultBox.id = "testResultBox";
-      resultBox.className = "mt-4 p-3 rounded-lg bg-gray-800 text-sm text-gray-200 border border-gray-700";
+      resultBox.className = "mt-4 p-3 rounded-2xl card text-sm text-slate-200 border border-slate-700";
       document.querySelector("#liveView").appendChild(resultBox);
     }
 
     resultBox.innerHTML = `
-      <p>📦 <b>패킷 수:</b> ${packets}</p>
-      <p>💾 <b>총 데이터량:</b> ${bytes} Bytes</p>
-      <p>⏱️ <b>총 소요시간:</b> ${time} s</p>
-      <p>📈 <b>평균 속도:</b> ${bps} B/s (${kbps} kbps)</p>
-      <p>📄 <b>로그 경로:</b> ${log_path}</p>
+      <p>패킷 수: <b>${packets}</b></p>
+      <p>총 데이터: <b>${bytes}</b> Bytes</p>
+      <p>소요 시간: <b>${time}</b> s</p>
+      <p>평균 속도: <b>${bps}</b> B/s (${kbps} kbps, ${mbps} Mbps)</p>
+      <p>로그 경로: <b>${log_path}</b></p>
     `;
 
     testing = false;
@@ -250,11 +313,12 @@ ws.onmessage = e => {
     return;
   }
 
-  // === 센서 실시간 데이터 수신 ===
   if (!testing && data.timestamp) {
-    const gpsFix = data.gps_fix === "A" ? "신호있음" : "신호없음";
+
+    const gpsFix = data.gps_fix === "A" ? "신호 있음" : "신호 없음";
+
     document.getElementById("gpsState").textContent = gpsFix;
-    document.getElementById("state").textContent = `측위: ${data.state}`;
+    document.getElementById("state").textContent = `상태: ${data.state}`;
     document.getElementById("uv").textContent = data.uv?.toFixed(2) ?? "--";
     document.getElementById("lux").textContent = data.lux?.toFixed(0) ?? "--";
     document.getElementById("pressure").textContent = data.pressure?.toFixed(2) ?? "--";
@@ -266,41 +330,38 @@ ws.onmessage = e => {
   }
 };
 
-// ✅ 최고속도 테스트 버튼
 const testBtn = document.getElementById("testBtn");
 testBtn.onclick = () => {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send("start_test");
     testing = true;
     maxSpeed = 0;
-
-    // UI 초기화
-    
-    document.getElementById("maxspeed").textContent = "🚀 계산 중...";
+    document.getElementById("maxspeed").textContent = "계산 중...";
     const existing = document.getElementById("testResultBox");
     if (existing) existing.remove();
-
-    console.log("[TEST] LoRa 단방향 속도테스트 시작");
   } else {
-    alert("❌ WebSocket 연결이 되어 있지 않습니다.");
+    alert("WebSocket 연결이 없습니다.");
   }
 };
 
-
-// ✅ 라벨 저장 함수 (버튼 색 피드백 버전)
+// 라벨 저장
 async function saveLabel(label) {
   const btn = document.getElementById(`btn${label}`);
+  const resetBtn = () => {
+    const base = btn.dataset.base;
+    btn.classList.remove("bg-red-500", "bg-blue-500", "bg-emerald-500");
+    if (base && !btn.classList.contains(base)) btn.classList.add(base);
+  };
+
   if (!lastSensor) {
     const original = btn.textContent;
-    btn.textContent = "⚠️ 데이터 없음";
-    btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, ""); // 기존 bg-* 전부 제거
+    btn.textContent = "데이터 없음";
+    resetBtn();
     btn.classList.add("bg-red-500");
     btn.disabled = true;
-
     setTimeout(() => {
       btn.textContent = original;
-      btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, ""); // 다시 색상 초기화
-      btn.classList.add(`bg-${label === "Indoor" ? "blue" : label === "Outdoor" ? "yellow" : "purple"}-400`);
+      resetBtn();
       btn.disabled = false;
     }, 1200);
     return;
@@ -308,8 +369,8 @@ async function saveLabel(label) {
 
   btn.disabled = true;
   const original = btn.textContent;
-  btn.textContent = "⏳ 저장 중...";
-  btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, "");
+  btn.textContent = "저장 중...";
+  resetBtn();
   btn.classList.add("bg-blue-500");
 
   try {
@@ -321,29 +382,25 @@ async function saveLabel(label) {
 
     if (res.ok) {
       const result = await res.json();
-      btn.textContent = "✅ 저장됨";
-      btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, "");
-      btn.classList.add("bg-green-500");
-      console.log(`[OK] ${result.label} 데이터 저장 완료`);
+      btn.textContent = "저장 완료";
+      resetBtn();
+      btn.classList.add("bg-emerald-500");
     } else {
       throw new Error("서버 응답 오류");
     }
   } catch (err) {
-    console.error(err);
-    btn.textContent = "❌ 실패";
-    btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, "");
+    btn.textContent = "저장 실패";
+    resetBtn();
     btn.classList.add("bg-red-500");
   }
 
   setTimeout(() => {
     btn.textContent = original;
-    btn.className = btn.className.replace(/bg-[a-z]+-\d+/g, "");
-    btn.classList.add(`bg-${label === "Indoor" ? "blue" : label === "Outdoor" ? "yellow" : "purple"}-400`);
+    resetBtn();
     btn.disabled = false;
   }, 1500);
 }
 
-// ✅ 버튼 클릭 이벤트
 document.getElementById("btnIndoor").onclick = () => saveLabel("Indoor");
 document.getElementById("btnOutdoor").onclick = () => saveLabel("Outdoor");
 document.getElementById("btnSemiOutdoor").onclick = () => saveLabel("SemiOutdoor");
@@ -355,11 +412,11 @@ async function loadLabelData(label){
   body.innerHTML = "";
   for(const row of data){
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td class="border-t px-2">${row.timestamp}</td>
-                    <td class="border-t px-2">${row.gps_fix ?? '-'}</td>
-                    <td class="border-t px-2">${row.uv?.toFixed(2)}</td>
-                    <td class="border-t px-2">${row.lux?.toFixed(0)}</td>
-                    <td class="border-t px-2">${row.pressure?.toFixed(2)}</td>`;
+    tr.innerHTML = `<td class="px-4 py-2">${row.timestamp}</td>
+                    <td class="px-4 py-2">${row.gps_fix ?? '-'}</td>
+                    <td class="px-4 py-2">${row.uv?.toFixed(2)}</td>
+                    <td class="px-4 py-2">${row.lux?.toFixed(0)}</td>
+                    <td class="px-4 py-2">${row.pressure?.toFixed(2)}</td>`;
     body.appendChild(tr);
   }
 }
